@@ -167,3 +167,9 @@
 - 梗库作者：B 站 **in1t_**，视频 BV1DMnS6kEkW，上游项目 in1t1a1/astrbot_plugin_memewiki、thawline/dsh-memewiki（MIT）。
 - 看视频/分镜插件作者：B 站 **苍穹晓雷**，视频 BV1Hgx76SEqb，插件 13520rygvv/dsh-bili-video；上游 Yuuyuko-uu/dsh-bili-subagent、c1overzz/dsh-bili-scroll、SAOS-3624/dsh-video-storyboard。
 - 本视频只做引用/致谢，不附带这些项目的源码、图片或视频资源；具体授权以作者仓库为准。
+
+## 附：表情包致谢
+
+- 表情包作者：B 站 **可以叫我云大人 / 雾雪**
+- 视频：BV13xnt6QE6s；项目：https://github.com/Loping151/dsh-nekowhale-stickers
+- 当前实例约 320 张表情；本视频只做引用/致谢，不附带表情图片。
