@@ -110,3 +110,14 @@ python3 tools/build_release.py
 ## 引用与致谢
 
 梗库、看视频/分镜能力的作者与上游项目见 [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md)。特别感谢 B 站作者 in1t_（梗库）和 苍穹晓雷（看视频/分镜插件），以及他们声明的 MIT 上游项目。
+
+## 官方项目（仅链接，不是我的项目）
+
+- **SnowLuma**
+  - 项目：https://github.com/SnowLuma/SnowLuma
+  - 文档：https://snowluma.github.io/
+  - EULA：https://github.com/SnowLuma/SnowLuma/blob/main/EULA.md
+- **DroidVM**
+  - 项目/官方获取入口：https://github.com/droidvm/app
+
+SnowLuma 和 DroidVM 都不是我的项目，本仓库只放官方链接，不打包、不镜像、不代分发它们的 APK、rootfs 或二进制。链接和教程不构成任何官方授权或背书；下载和使用请遵守各自许可证/EULA，SnowLuma 尤其注意非商业和再分发限制。
