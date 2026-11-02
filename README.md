@@ -121,3 +121,7 @@ python3 tools/build_release.py
   - 项目/官方获取入口：https://github.com/droidvm/app
 
 SnowLuma 和 DroidVM 都不是我的项目，本仓库只放官方链接，不打包、不镜像、不代分发它们的 APK、rootfs 或二进制。链接和教程不构成任何官方授权或背书；下载和使用请遵守各自许可证/EULA，SnowLuma 尤其注意非商业和再分发限制。
+
+## 表情包致谢
+
+当前实例的表情包接入感谢 B 站作者 **可以叫我云大人 / 雾雪**（项目 [Loping151/dsh-nekowhale-stickers](https://github.com/Loping151/dsh-nekowhale-stickers)，视频 BV13xnt6QE6s）。表情图片/目录不随本仓库分发；许可与使用方式见作者项目。
