@@ -1,0 +1,18 @@
+# 仅作参考。SnowLuma 的获取和启动方式请遵循其官方文档与 EULA。
+# 本仓库不代分发 SnowLuma rootfs，也不保证此 unit 适用于你的安装方式。
+[Unit]
+Description=SnowLuma chroot stack (user-managed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/snowluma/run-snowluma-chroot.sh
+StandardOutput=append:/opt/snowluma/container.log
+StandardError=append:/opt/snowluma/container.log
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

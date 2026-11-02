@@ -1,0 +1,2 @@
+# bridge 运行时只依赖 Python 标准库。
+# 可选：语音需要 edge-tts；视频分镜需要 node + 对应组件；梗百科需要 memes.db。

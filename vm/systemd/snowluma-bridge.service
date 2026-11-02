@@ -1,0 +1,17 @@
+[Unit]
+Description=SnowLuma DeepSeek Bridge (OneBot WS client)
+After=network-online.target snowluma.service
+Wants=network-online.target snowluma.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/snowluma/bridge
+EnvironmentFile=/opt/snowluma/bridge/bridge.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /opt/snowluma/bridge/snowluma_service.py --state-dir /opt/snowluma/bridge --port 32146 --token $BRIDGE_CONTROL_TOKEN
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

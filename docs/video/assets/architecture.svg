@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#0b1020"/>
+  <text x="80" y="80" fill="#e8eefc" font-size="44" font-family="sans-serif" font-weight="700">手机养鱼架构</text>
+  <text x="80" y="120" fill="#8fa3c8" font-size="22" font-family="sans-serif">Android → DroidVM → Ubuntu → SnowLuma → OneBot → bridge → DeepSeek</text>
+  <g font-family="sans-serif">
+    <rect x="80" y="190" width="230" height="110" rx="18" fill="#17213b" stroke="#4f7cff" stroke-width="2"/>
+    <text x="110" y="235" fill="#9fc0ff" font-size="18">Android</text>
+    <text x="110" y="265" fill="#dbe6ff" font-size="16">DroidVM (root)</text>
+    <rect x="380" y="190" width="230" height="110" rx="18" fill="#17213b" stroke="#4f7cff" stroke-width="2"/>
+    <text x="410" y="235" fill="#9fc0ff" font-size="18">Ubuntu VM</text>
+    <text x="410" y="265" fill="#dbe6ff" font-size="16">真内核 / 25GB</text>
+    <rect x="680" y="190" width="260" height="110" rx="18" fill="#17213b" stroke="#4f7cff" stroke-width="2"/>
+    <text x="710" y="235" fill="#9fc0ff" font-size="18">SnowLuma chroot</text>
+    <text x="710" y="265" fill="#dbe6ff" font-size="16">WebUI 5099 / OneBot</text>
+    <rect x="1010" y="190" width="240" height="110" rx="18" fill="#17213b" stroke="#4f7cff" stroke-width="2"/>
+    <text x="1040" y="235" fill="#9fc0ff" font-size="18">bridge</text>
+    <text x="1040" y="265" fill="#dbe6ff" font-size="16">记忆 / 关系 / 缓存</text>
+    <rect x="1320" y="190" width="200" height="110" rx="18" fill="#17213b" stroke="#4f7cff" stroke-width="2"/>
+    <text x="1350" y="235" fill="#9fc0ff" font-size="18">DeepSeek</text>
+    <text x="1350" y="265" fill="#dbe6ff" font-size="16">API</text>
+    <g stroke="#5f86ff" stroke-width="3" fill="none">
+      <path d="M310 245 H380"/><path d="M610 245 H680"/><path d="M940 245 H1010"/><path d="M1250 245 H1320"/>
+    </g>
+    <g fill="#5f86ff"><circle cx="345" cy="245" r="5"/><circle cx="645" cy="245" r="5"/><circle cx="975" cy="245" r="5"/><circle cx="1285" cy="245" r="5"/></g>
+    <text x="90" y="390" fill="#8fa3c8" font-size="18">QQ 小号</text>
+    <text x="90" y="420" fill="#dbe6ff" font-size="16">只使用小号，风险自负</text>
+    <text x="90" y="500" fill="#8fa3c8" font-size="18">OneBot v11</text>
+    <text x="90" y="530" fill="#dbe6ff" font-size="16">WS 127.0.0.1:3001</text>
+    <text x="90" y="610" fill="#8fa3c8" font-size="18">缓存策略</text>
+    <text x="90" y="640" fill="#dbe6ff" font-size="16">跨天持久上下文，70% 检查点</text>
+    <text x="90" y="720" fill="#8fa3c8" font-size="18">隐私</text>
+    <text x="90" y="750" fill="#dbe6ff" font-size="16">key / token / QQ / 群号不出现</text>
+  </g>
+  <text x="80" y="850" fill="#6f86b5" font-size="16" font-family="sans-serif">phone-fish · 非官方 · 非商业 · 小号风险自负</text>
+</svg>

@@ -1,0 +1,23 @@
+# secrets and runtime state
+.env
+bridge.env
+bridge/config.json
+bridge/state.json
+bridge/memory.db
+bridge/conversation.db
+bridge/*.log
+bridge/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.db-wal
+*.db-shm
+backups/
+vm-backup/
+dist/
+assets/*.db
+assets/*.zip
+*.tar
+*.tar.gz
+*.toolpkg
+.DS_Store
