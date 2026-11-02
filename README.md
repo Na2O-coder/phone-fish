@@ -35,7 +35,8 @@ Android 手机（root，DroidVM）
 9. [新机上手检查表](docs/08-新机上手检查表.md)
 10. [给 DSH/Agent 的安装调试手册](docs/11-给DSH或Agent的安装调试手册.md)
 11. [手机-only 获取 SnowLuma 镜像](docs/10-SnowLuma镜像获取-DockerTarBuilder.md)
-12. [B 站视频脚本套件](docs/video/script.md)
+12. [B 站宣传片大纲（6–8 分钟，先看门槛）](docs/video/promo-script.md)
+13. [完整教程视频脚本](docs/video/script.md)
 
 ## 重要授权说明
 
