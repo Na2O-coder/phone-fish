@@ -35,3 +35,15 @@
 - OneBot v11 接口约定
 
 如果以上作者认为本仓库的引用/链接方式不合适，请提出，我会调整或移除。
+
+## 表情包
+
+- **B 站作者：可以叫我云大人 / 雾雪**
+- 视频：【消耗32万token，我把我的大肥鱼表情包做成了dsh插件！】
+- 视频链接：https://www.bilibili.com/video/BV13xnt6QE6s
+- 短链接：https://b23.tv/0dxJcNA
+- 项目：https://github.com/Loping151/dsh-nekowhale-stickers
+- 作者主页：https://space.bilibili.com/103739
+- 作者站点：https://kiriyuki.com
+- 当前实例接入了约 320 张表情（作者项目当前标称 322 张）。
+- 许可：项目 README 标注 Apache-2.0 / CC BY-NC 4.0；表情图片和表情目录不随本仓库分发，请按作者项目/许可自行使用。
