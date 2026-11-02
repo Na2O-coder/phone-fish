@@ -64,3 +64,8 @@
 - [ ] 仓库链接可访问
 - [ ] 评论区置顶
 - [ ] 视频内无真实 QQ/群/key/token/IP/聊天
+
+## 引用与致谢（简介/片尾）
+
+- 梗库：B 站 in1t_，视频 BV1DMnS6kEkW，上游 in1t1a1/astrbot_plugin_memewiki、thawline/dsh-memewiki（MIT）。
+- 看视频/分镜：B 站 苍穹晓雷，视频 BV1Hgx76SEqb，插件 13520rygvv/dsh-bili-video；上游 Yuuyuko-uu/dsh-bili-subagent、c1overzz/dsh-bili-scroll、SAOS-3624/dsh-video-storyboard。

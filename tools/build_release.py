@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 VERSION = "0.1.0"
 INCLUDE_DIRS = ["docs", "bridge", "vm", "tools", "memewiki", "tests"]
-INCLUDE_FILES = ["README.md", "AGENTS.md", "LICENSE", "NOTICE.md", "SECURITY.md", "PRIVACY.md", "CHANGELOG.md", ".gitignore"]
+INCLUDE_FILES = ["README.md", "AGENTS.md", "LICENSE", "NOTICE.md", "SECURITY.md", "PRIVACY.md", "CHANGELOG.md", "ACKNOWLEDGEMENTS.md", ".gitignore"]
 SKIP_NAMES = {"config.json", "bridge.env", "state.json", "memory.db", "conversation.db", "bridge.log"}
 SKIP_DIRS = {"__pycache__", "dist", ".git"}
 

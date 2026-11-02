@@ -39,3 +39,10 @@
 ## 表情目录/图片
 
 本仓库不包含他人表情包图片或表情目录数据；如需使用，请自行确认授权并自行导入。
+
+## 引用与致谢
+
+详细的 B 站作者/视频链接/上游项目见 ACKNOWLEDGEMENTS.md。
+
+- 梗库：B 站 in1t_，视频 BV1DMnS6kEkW，上游 in1t1a1/astrbot_plugin_memewiki 与 thawline/dsh-memewiki（MIT）。
+- 看视频/分镜：B 站 苍穹晓雷，视频 BV1Hgx76SEqb，插件 13520rygvv/dsh-bili-video；上游 Yuuyuko-uu/dsh-bili-subagent、c1overzz/dsh-bili-scroll、SAOS-3624/dsh-video-storyboard（均为 MIT，按各自仓库为准）。
