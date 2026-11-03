@@ -3,7 +3,7 @@
 > DroidVM 真虚拟机 + SnowLuma(chroot) + OneBot + DeepSeek bridge
 
 这是一个「没有电脑、没有常开服务器，只有一台安卓手机」的 QQ AI 陪伴小号实践包。
-它记录了我从 Operit/PRoot/udocker 的失败路线，最终走到 **DroidVM 真虚拟机 + SnowLuma** 的来时路，并把可以公开的部分整理成可复现的配置、bridge、文档和视频脚本。
+它记录了我从 Operit/PRoot/udocker 的失败路线，最终走到 **DroidVM 真虚拟机 + SnowLuma** 的来时路，并把可以公开的部分整理成可复现的配置、bridge 和文档。
 
 ## 这是什么
 
@@ -35,7 +35,6 @@ Android 手机（root，DroidVM）
 9. [新机上手检查表](docs/08-新机上手检查表.md)
 10. [给 DSH/Agent 的安装调试手册](docs/11-给DSH或Agent的安装调试手册.md)
 11. [手机-only 获取 SnowLuma 镜像](docs/10-SnowLuma镜像获取-DockerTarBuilder.md)
-12. [B 站视频脚本套件](docs/video/script.md)
 
 ## 重要授权说明
 
@@ -47,7 +46,7 @@ SnowLuma 的 EULA 为源码可见、非商业许可，并限制将官方发行�
 
 - 我编写/整理的 bridge 与文档；
 - 通用配置模板和隐私扫描/构建工具；
-- 视频脚本和排错笔记。
+- 排错笔记。
 
 本仓库**不包含**：
 
@@ -86,7 +85,7 @@ sudo systemctl enable --now snowluma-bridge
 - 控制 API 只监听 127.0.0.1；
 - .env、config.json、state.json、memory.db、日志不要发人、不要提交；
 - 发布截图/视频前必须打码 QQ、群、API key、IP、token、聊天内容；
-- 详细清单见 [PRIVACY.md](PRIVACY.md) 和 [视频隐私检查表](docs/video/privacy-checklist.md)。
+- 详细清单见 [PRIVACY.md](PRIVACY.md)。
 
 ## 开发/验证
 
