@@ -73,6 +73,12 @@ AstrBot 是 QQ bot 框架，NapCat / SnowLuma 是 OneBot 接入端，两者可�
 
 phone-fish 对比的重点不是「框架 vs 接入端」，而是「通用框架 + 协议端」与「定制 bridge + SnowLuma」这两种整体方案。
 
+### 能不能换成 AstrBot + SnowLuma？
+
+技术上可以：保留 SnowLuma 作为 OneBot 接入端，把 phone-fish bridge 换成 AstrBot。AstrBot 官方支持 OneBot v11，但 SnowLuma 的事件、图片、语音、表情和引用字段兼容性需要实测。
+
+注意：AstrBot 是 AGPL-3.0，本仓库 bridge/文档是 MIT；不要把 AstrBot 代码直接并进 bridge。替换会得到插件生态、WebUI、多平台和知识库等能力，但会失去当前定制的人格、关系/心情、睡眠、群规则和表情逻辑，需要迁移。QQ 接入仍然是 SnowLuma，账号风险不会因为换框架而消失。
+
 ## 架构
 
 ~~~text
