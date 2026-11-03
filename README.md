@@ -67,6 +67,12 @@ QQ 小号
 
 这张表只说明取舍，不把未经统计验证的账号风险差异包装成“客观保证”。
 
+### 先分清：框架和 QQ 接入端是两层
+
+AstrBot 是 QQ bot 框架，NapCat / SnowLuma 是 OneBot 接入端，两者可以组合。上表用「AstrBot + NapCat」代表常见组合；「AstrBot + SnowLuma」理论上也可行，但需要实测 SnowLuma 的 OneBot 兼容性。
+
+phone-fish 对比的重点不是「框架 vs 接入端」，而是「通用框架 + 协议端」与「定制 bridge + SnowLuma」这两种整体方案。
+
 ## 架构
 
 ~~~text
