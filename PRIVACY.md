@@ -19,4 +19,4 @@
 - 使用独立演示 QQ/群；
 - 打码 QQ 号、群名、头像、二维码、token、key、IP、路径；
 - 不展示私人聊天、家庭/关系内容、手机通知；
-- 具体清单：docs/video/privacy-checklist.md。
+- 发布前按 [09-新机上手检查表](docs/09-新机上手检查表.md) 的「H. 发布前」逐项检查，并运行 tools/redact_check.py .。

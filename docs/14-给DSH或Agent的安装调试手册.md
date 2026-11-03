@@ -1,15 +1,80 @@
-# 11 · 给 DSH / 其他 Agent 的安装调试手册
+# 14 · 给 DSH / 其他 Agent 的安装调试手册
 
 > 面向：在手机上运行的 DSH 或其他有 shell/SSH/文件能力的 Agent。
 > 目标：让 Agent 按步骤协助主人装 DroidVM、VM、SnowLuma、bridge，并在出问题时按决策树排查。
 >
 > 重要：Agent 不是“代你点完所有按钮”的黑盒。SnowLuma 的 EULA 仍要求用户自己取得软件并遵守授权；Agent 不要自动下载/再分发 SnowLuma tar，也不要把它上传到公开仓库。
 
+## 0.0 先判断虚拟化路线（不要默认 KVM 可用）
+
+先读 [00-选择虚拟机运行路线](00-选择虚拟机运行路线.md)。Agent 必须先判断设备适合哪条路线：
+
+- 有 Root + DroidVM 能实际启动 VM：优先 KVM；
+- 没有 Root / 没有 KVM：说明软件模拟是 Experimental，性能、发热、耗电可能明显增加；
+- 不要因为 SoC 是骁龙 8 Gen 3 / 8 Elite 就直接认定支持 KVM；
+- KVM 启动失败时不要反复重跑同一套命令，记录错误并询问主人是否尝试软件模拟；
+- 两条路线的初始化命令不要混用。
+
+只读检查项：
+
+~~~bash
+getprop ro.product.model
+getprop ro.board.platform
+getprop ro.build.version.release
+uname -a
+ls -l /dev/kvm 2>&1
+free -h
+df -h
+~~~
+
+## 0.0.1 SnowLuma 授权边界
+
+SnowLuma 是独立第三方软件，不属于 phone-fish。Agent 必须：
+
+1. 提醒主人阅读 SnowLuma 当前 EULA；
+2. 不擅自下载、分发或上传 SnowLuma 本体；
+3. 不绕过官方授权要求；
+4. 不把 SnowLuma 本体打包进 phone-fish Release；
+5. 不擅自执行可能违反 EULA 的自动化部署操作；
+6. 涉及安装、镜像获取、运行方式时，遵循当前官方授权允许的范围。
+
+如果某项操作是否符合 EULA 不明确：停止操作并向主人说明。
+
+## 0.0.2 操作分级
+
+| 等级 | 操作 | 是否确认 |
+|---|---|---|
+| Level 1 | 检查系统、看日志、查端口、只读采样 | 通常不需要 |
+| Level 2 | 安装依赖、配置 bridge、创建 systemd 服务 | 按影响范围确认 |
+| Level 3 | 格式化/覆盖、删除数据、QQ 登录、密钥输入、第三方软件授权 | 必须确认或由主人亲自操作 |
+
+## 0.0.3 环境检测报告
+
+正式部署前，先输出一份可复制的报告：
+
+~~~text
+PHONE-FISH 环境检测
+设备：
+CPU：
+Root：
+KVM：
+KVM 权限：
+内存：
+可用存储：
+SSH：
+虚拟机运行方式：
+推荐路线：
+警告：
+是否继续：
+~~~
+
+如果推荐软件模拟，必须写明：性能损耗、发热、耗电可能增加，且当前为实验性。
+
 ## 0.1 在手机 DSH 里怎么开始
 
 1. 手机打开 DSH，新建任务；
 2. 把本仓库/本包交给它（GitHub 链接或本地路径均可）；
-3. 先让它读 AGENTS.md 和 docs/11，不要直接让它“随便装”；
+3. 先让它读 AGENTS.md 和 docs/14，不要直接让它“随便装”；
 4. 把 SSH 入口告诉它（例如手机 127.0.0.1:2222），密码/私钥由你在终端里输入，不要贴在聊天；
 5. 让它先做只读预检，把 uname/free/df/ss 结果发给你；
 6. 预检通过后再让它按阶段执行；每一步要求它给你“通过标准”和“失败下一步”；
@@ -88,7 +153,7 @@ ss -ltnp | grep -E '2222|5099|3001|32146' || true
 
 ## 3. 阶段 B：取 SnowLuma 镜像（主人操作 GitHub）
 
-Agent 不应替主人跑公开镜像下载。让主人按 [10-SnowLuma镜像获取-DockerTarBuilder.md](10-SnowLuma镜像获取-DockerTarBuilder.md)：
+Agent 不应替主人跑公开镜像下载。让主人按 [11-SnowLuma镜像获取-DockerTarBuilder.md](11-SnowLuma镜像获取-DockerTarBuilder.md)：
 
 1. 用自己的 GitHub fork；
 2. Actions → ARM64 Pull and Save Docker Image；

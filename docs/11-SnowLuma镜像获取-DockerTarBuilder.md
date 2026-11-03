@@ -1,4 +1,4 @@
-# 10 · 手机-only 获取 SnowLuma 镜像（DockerTarBuilder）
+# 11 · 手机-only 获取 SnowLuma 镜像（DockerTarBuilder）
 
 > 目标：没有电脑、没有本地 Docker，也能拿到 SnowLuma 的 arm64 Docker 镜像压缩包。
 >

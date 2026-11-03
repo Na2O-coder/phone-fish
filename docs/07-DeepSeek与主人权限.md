@@ -1,4 +1,4 @@
-# 06 · DeepSeek 与主人权限
+# 07 · DeepSeek 与主人权限
 
 ## 1. DeepSeek key
 
