@@ -6,7 +6,7 @@
 
 ~~~bash
 cd /opt/snowluma
-unzip /tmp/phone-fish-v0.1.0.zip -d phone-fish
+unzip /tmp/phone-fish-v0.2.zip -d phone-fish
 ~~~
 
 目录里应该有：
