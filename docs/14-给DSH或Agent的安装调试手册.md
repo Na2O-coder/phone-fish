@@ -5,27 +5,35 @@
 >
 > 重要：Agent 不是“代你点完所有按钮”的黑盒。SnowLuma 的 EULA 仍要求用户自己取得软件并遵守授权；Agent 不要自动下载/再分发 SnowLuma tar，也不要把它上传到公开仓库。
 
-## 0.0 先判断虚拟化路线（不要默认 KVM 可用）
+## 0.0 先判断虚拟化路线（不要默认硬件虚拟化可用）
 
 先读 [00-选择虚拟机运行路线](00-选择虚拟机运行路线.md)。Agent 必须先判断设备适合哪条路线：
 
-- 有 Root + DroidVM 能实际启动 VM：优先 KVM；
-- 没有 Root / 没有 KVM：说明软件模拟是 Experimental，性能、发热、耗电可能明显增加；
-- 不要因为 SoC 是骁龙 8 Gen 3 / 8 Elite 就直接认定支持 KVM；
-- KVM 启动失败时不要反复重跑同一套命令，记录错误并询问主人是否尝试软件模拟；
+- 有 Root + DroidVM 能实际启动 VM：优先硬件虚拟化（Gunyah / GenieZone / KVM）；
+- 没有 Root / 没有可用后端：说明软件模拟是 Experimental，性能、发热、耗电可能明显增加；
+- 不要因为 SoC 是骁龙 8 Gen 3 / 8 Elite 就直接认定支持某种后端；
+- VM 启动失败时不要反复重跑同一套命令，记录错误并询问主人是否尝试软件模拟；
 - 两条路线的初始化命令不要混用。
 
-只读检查项：
+先在手机宿主机 Root Shell 做只读检查：
 
 ~~~bash
+su
+ls -l /dev/gunyah /dev/gzvm /dev/kvm 2>/dev/null
+uname -a
 getprop ro.product.model
 getprop ro.board.platform
 getprop ro.build.version.release
-uname -a
-ls -l /dev/kvm 2>&1
-free -h
-df -h
 ~~~
+
+按设备节点初判：
+
+- `/dev/gunyah`：Qualcomm Gunyah；
+- `/dev/gzvm`：MediaTek GenieZone；
+- `/dev/kvm`：Linux KVM；
+- 都不存在：软件模拟路线（Experimental）。
+
+注意：节点存在只说明接口可用，不代表 VM 一定能启动；必须实际启动一个最小 VM 验证。不要只根据 SoC 型号判断。
 
 ## 0.0.1 SnowLuma 授权边界
 
@@ -57,8 +65,8 @@ PHONE-FISH 环境检测
 设备：
 CPU：
 Root：
-KVM：
-KVM 权限：
+硬件虚拟化后端：
+设备节点/权限：
 内存：
 可用存储：
 SSH：
@@ -187,6 +195,8 @@ sudo chown -R "$USER:$USER" /opt/snowluma
 ## 5. 阶段 D：SnowLuma 本地安装
 
 Agent 只做辅助，不提供/不下载 SnowLuma 本体。
+
+> 说明：`skopeo` / `umoci` 只用于从 OCI/Docker 镜像格式中解包 rootfs；这里不需要 Docker Engine。实际运行时仍然是 Ubuntu 里的 chroot，不是 Docker 容器。
 
 按主人下载的官方 tar：
 

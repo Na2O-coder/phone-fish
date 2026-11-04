@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- 补充硬件虚拟化平台说明：Qualcomm Gunyah（`/dev/gunyah`）、MediaTek GenieZone（`/dev/gzvm`）、Linux KVM（`/dev/kvm`）。
+- 明确 DroidVM 是 VM 管理器，不是 Hypervisor；KVM 是硬件虚拟化后端，不是独立 VM 软件。
+- README / AGENTS / docs/00 / 02 / 09 / 12 / 13 / 14 统一硬件虚拟化与软件模拟的术语和预检命令。
+- 澄清 OCI/Docker 镜像解包只用于提取 rootfs，运行时是 chroot，不依赖 Docker Engine。
+
 ## 0.2
 
 发布时间：2026-11-03

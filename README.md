@@ -1,6 +1,6 @@
 # phone-fish：在安卓手机上运行 DeepSeek QQ AI 小号
 
-> SnowLuma + OneBot + DeepSeek bridge · KVM 优先 · 软件模拟实验性 · Agent 辅助部署
+> SnowLuma + OneBot + DeepSeek bridge · 硬件虚拟化优先 · 软件模拟实验性 · Agent 辅助部署
 
 phone-fish 是一个尝试把 **QQ AI 小号完整部署在安卓手机本地 Linux 环境**里的开源项目。
 
@@ -10,8 +10,8 @@ phone-fish 是一个尝试把 **QQ AI 小号完整部署在安卓手机本地 Li
 
 项目提供两条虚拟机运行思路：
 
-- **KVM 硬件虚拟化（推荐）**：需要 Root 和可用的硬件虚拟化支持，性能开销通常较低；
-- **软件模拟虚拟机（Experimental / 实验性）**：不依赖 KVM，但性能、发热和耗电可能明显增加，目前尚未完成端到端实测。
+- **硬件虚拟化（推荐：Gunyah / GenieZone / KVM）**：需要 Root 和可用的硬件虚拟化后端，性能开销通常较低；
+- **软件模拟虚拟机（Experimental / 实验性）**：不依赖硬件虚拟化，但性能、发热和耗电可能明显增加，目前尚未完成端到端实测。
 
 > 本项目不是 QQ 官方产品，也不隶属于腾讯、DeepSeek、SnowLuma 或 DroidVM。任何第三方 QQ 接入方案都不能保证账号永久安全。
 
@@ -33,16 +33,16 @@ QQ 小号
 
 ## 两条虚拟机路线
 
-| | 路线 A：KVM 硬件虚拟化 | 路线 B：软件模拟 |
+| | 路线 A：硬件虚拟化 | 路线 B：软件模拟 |
 |---|---|---|
 | 推荐度 | 推荐 | Experimental / 实验性 |
 | Root | 需要 | 通常不需要 |
-| 硬件要求 | 需要可用的 KVM / Gunyah / GenieZone 支持 | 对虚拟化支持依赖较低 |
+| 硬件要求 | 需要可用的 Gunyah / GenieZone / KVM 后端 | 对虚拟化支持依赖较低 |
 | 性能开销 | 通常较低 | 通常较高 |
 | 发热/耗电 | 取决于实际负载 | 相同负载下可能更高 |
-| 适合 | 长期运行、备用机/主力机 | 没有 KVM 时尝试，或做兼容性验证 |
+| 适合 | 长期运行、备用机/主力机 | 没有硬件虚拟化时尝试，或做兼容性验证 |
 
-**处理器型号不等于支持 KVM。** 骁龙 8 Gen 3 / 8 Elite、天玑旗舰只是“可以优先检查”，最终取决于厂商内核、固件、虚拟化接口，以及 DroidVM 能否实际启动 VM。
+**处理器型号不等于支持硬件虚拟化。** 骁龙 8 Gen 3 / 8 Elite、天玑旗舰只是“可以优先检查”，最终取决于厂商内核、固件、虚拟化接口，以及 DroidVM 能否实际启动 VM。
 
 路线选择、检测命令和性能测试方法见：
 
@@ -58,9 +58,9 @@ QQ 小号
 | QQ 接入 | NapCat（第三方协议端） | SnowLuma（Linux QQ 客户端路线） |
 | AI 模型 | DeepSeek 等 | DeepSeek |
 | 手机部署 | 有社区方案 | 本项目主要目标 |
-| Root | 视部署方案而定 | KVM 路线需要 |
-| 虚拟机 | 通常不需要 | KVM 或软件模拟 |
-| 运行开销 | 取决于部署 | KVM 通常较低；软件模拟较高 |
+| Root | 视部署方案而定 | 硬件虚拟化路线需要 |
+| 虚拟机 | 通常不需要 | 硬件虚拟化或软件模拟 |
+| 运行开销 | 取决于部署 | 硬件虚拟化通常较低；软件模拟较高 |
 | 账号风险 | 存在 | 仍存在，无法保证不封号 |
 | 部署难度 | 通常较低 | 较高 |
 | Agent 部署引导 | 取决于项目 | 仓库内置 AGENTS.md + 专门手册 |
@@ -81,33 +81,55 @@ phone-fish 对比的重点不是「框架 vs 接入端」，而是「通用框�
 
 ## 架构
 
+### 组件层次
+
+| 组件 | 职责 | 所在层 |
+|---|---|---|
+| DroidVM | 创建、管理、运行虚拟机 | Android 宿主机 |
+| Gunyah / GenieZone / KVM | 硬件虚拟化后端 | Android / Linux 内核 |
+| Ubuntu | 提供 Linux 运行环境 | 虚拟机内部 |
+| SnowLuma | QQ 客户端、WebUI、OneBot | Ubuntu 内的 chroot |
+| OneBot | 提供 QQ 消息接口 | SnowLuma |
+| snowluma-bridge | DeepSeek 接入、消息处理 | Ubuntu |
+| DeepSeek API | 提供大模型能力 | 外部服务 |
+
+### 硬件虚拟化说明
+
+本项目演示环境使用高通骁龙设备，由 Qualcomm Gunyah 提供硬件虚拟化能力。**DroidVM 是 VM 管理器，不是 Hypervisor 本身。**
+
+DroidVM 可用的硬件虚拟化后端取决于设备：
+
+- Qualcomm Gunyah：`/dev/gunyah`
+- MediaTek GenieZone：`/dev/gzvm`
+- Linux KVM：`/dev/kvm`
+
+具体使用哪一种，取决于手机 SoC、固件和内核环境。**设备节点存在只说明接口出现，不等于 VM 一定能启动**；不要仅凭处理器型号判断。
+
+### 部署结构（演示环境：Gunyah + DroidVM）
+
 ~~~text
-Android 手机
-└── 虚拟机（KVM 或软件模拟）
-    └── Ubuntu
-        ├── SnowLuma（chroot / 官方 rootfs）
-        │   ├── WebUI  :5099
+Android 宿主机
+└── DroidVM（VM 管理器）
+    ├── Gunyah / GenieZone / KVM（硬件虚拟化后端）
+    └── Ubuntu VM
+        ├── SnowLuma（官方 rootfs / chroot）
+        │   ├── WebUI       :5099
         │   ├── OneBot HTTP :3000
         │   └── OneBot WS   :3001
         └── snowluma-bridge（本项目）
             └── DeepSeek API
 ~~~
 
-组件边界：
+> 软件模拟路线是实验性备选：上层 Ubuntu / SnowLuma / bridge 的目标一致，但 VM 工具、性能和功耗代价不同；见 [00-选择虚拟机运行路线](docs/00-选择虚拟机运行路线.md)。
 
-| 组件 | 负责 | 是否在本仓库 |
-|---|---|---|
-| SnowLuma | QQ 客户端、WebUI、OneBot | 否，官方软件 |
-| DroidVM | 安卓上的虚拟机运行环境 | 否，官方 APK |
-| phone-fish bridge | 回复策略、DeepSeek、记忆/关系/权限 | 是，MIT |
-| DeepSeek | 模型 API | 否，需要自己的 key |
+**Docker 不在运行路径里。** 获取镜像时可以用 OCI/Docker 格式相关工具（skopeo/umoci）解包 rootfs；实际运行是 chroot，不需要 Docker Engine。
 
 ## 项目特点
 
 - **不需要电脑**：主要运行环境部署在安卓手机内部；
 - **不需要常开云服务器**：Linux、SnowLuma 和 bridge 都在手机/虚拟机里；
 - **SnowLuma 接入路线**：使用 Linux QQ 客户端 + OneBot，而不是 NapCat 协议端；
-- **双虚拟机路线**：KVM 优先，软件模拟作为实验性备选；
+- **双虚拟机路线**：硬件虚拟化优先（Gunyah / GenieZone / KVM），软件模拟作为实验性备选；
 - **长期记忆/关系/表情/睡眠/权限**：bridge 侧的可配置行为；
 - **Agent 辅助部署**：AGENTS.md + docs/14，让 DSH 或其他 Agent 先检查环境、再分阶段执行；
 - **隐私优先**：仓库不包含密钥、QQ 数据、聊天记录、rootfs 或 APK。
@@ -154,7 +176,7 @@ SnowLuma 的 EULA 为源码可见、非商业许可，并限制将官方发行�
 ## 快速开始（简版）
 
 0. **先选路线**：读 [00-选择虚拟机运行路线](docs/00-选择虚拟机运行路线.md)，按 [12-设备兼容性检测](docs/12-设备兼容性检测.md) 做只读检查。
-1. **KVM 路线**：准备 Root 安卓手机、DroidVM、兼容的虚拟化支持；软件模拟路线目前是实验性，不要当作已验证方案。
+1. **硬件虚拟化路线**：准备 Root 安卓手机、DroidVM、兼容的硬件虚拟化后端；软件模拟路线目前是实验性，不要当作已验证方案。
 2. 按 [02-手机与DroidVM准备](docs/02-手机与DroidVM准备.md) 和 [03-虚拟机初始化](docs/03-虚拟机初始化.md) 建 Ubuntu VM。
 3. **按 SnowLuma 官方文档**安装并登录，开启 OneBot WS 3001；镜像获取见 [11-SnowLuma镜像获取-DockerTarBuilder](docs/11-SnowLuma镜像获取-DockerTarBuilder.md)。
 4. 把本包解压到 VM，例如 /opt/snowluma/phone-fish，生成配置并安装 bridge：
@@ -175,9 +197,9 @@ sudo systemctl enable --now snowluma-bridge
 
 ## 性能与功耗
 
-KVM 的“低开销”是相对软件模拟而言，不是零开销。内存、设备模拟、I/O 和后台运行仍然有成本。
+硬件虚拟化的“低开销”是相对软件模拟而言，不是零开销。内存、设备模拟、I/O 和后台运行仍然有成本。
 
-| 项目 | KVM | 软件模拟 |
+| 项目 | 硬件虚拟化 | 软件模拟 |
 |---|---|---|
 | CPU 执行 | 硬件辅助虚拟化 | 软件模拟 |
 | 性能开销 | 通常较低 | 通常较高 |

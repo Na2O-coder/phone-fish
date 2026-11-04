@@ -1,8 +1,8 @@
-# 02 · 手机与 DroidVM 准备（KVM 路线）
+# 02 · 手机与 DroidVM 准备（硬件虚拟化路线）
 
 ## 1. 现实门槛
 
-本文是 **KVM 路线**。没有 Root 或没有可用 KVM 的设备，先读 [00-选择虚拟机运行路线](00-选择虚拟机运行路线.md)；软件模拟路线目前是实验性，不要当作已验证方案。
+本文是 **硬件虚拟化路线**。没有 Root 或没有可用硬件虚拟化后端的设备，先读 [00-选择虚拟机运行路线](00-选择虚拟机运行路线.md)；软件模拟路线目前是实验性，不要当作已验证方案。
 
 这不是“所有安卓手机都能跑”的教程。先确认：
 
@@ -17,9 +17,38 @@
 - 一台全新的 QQ 小号；
 - 一个 DeepSeek API key（有余额）。
 
-> 不满足就别硬上。没有 root/虚拟化节点的手机跑不了 KVM 路线；可以评估软件模拟，但性能和续航可能明显变差。
+> 不满足就别硬上。没有 root/虚拟化节点的手机跑不了硬件虚拟化路线；可以评估软件模拟，但性能和续航可能明显变差。
 
-## 2. 安装 DroidVM
+## 2. 硬件虚拟化平台说明
+
+**DroidVM 是 VM 管理器/运行环境，不是 Hypervisor 本身。** 硬件虚拟化能力由手机 SoC、内核和固件提供的后端完成。
+
+常见后端与设备节点：
+
+| 平台 | 常见设备节点 | 说明 |
+|---|---|---|
+| Qualcomm Gunyah | `/dev/gunyah` | 本项目演示环境使用的高通方案 |
+| MediaTek GenieZone | `/dev/gzvm` | 联发科设备的硬件虚拟化后端 |
+| Linux KVM | `/dev/kvm` | Linux 内核虚拟化接口 |
+
+在手机 Root Shell 里做只读检查：
+
+~~~bash
+su
+ls -l /dev/gunyah /dev/gzvm /dev/kvm 2>/dev/null
+uname -a
+getprop ro.product.model
+getprop ro.board.platform
+getprop ro.build.version.release
+~~~
+
+注意：
+
+- 设备节点存在只说明接口出现，不代表 DroidVM 一定能启动 VM；必须实际启动一个最小 VM 验证。
+- 不要只根据 SoC 型号判断支持哪种后端。
+- 本项目演示截图和流程以 **Qualcomm Gunyah + DroidVM** 为准；其他设备按实际后端识别，不要照搬。
+
+## 3. 安装 DroidVM
 
 DroidVM 官方 APK 是闭源软件（包名 com.zzvm），本仓库不打包、不提供镜像。
 
@@ -30,7 +59,7 @@ DroidVM 官方 APK 是闭源软件（包名 com.zzvm），本仓库不打包、�
 
 安装后授予 root 权限，打开 App，确认能看到虚拟化后端（Gunyah/GenieZone/KVM）。
 
-## 3. 创建 Ubuntu VM
+## 4. 创建 Ubuntu VM
 
 建议参数（按手机内存调整）：
 
@@ -45,7 +74,7 @@ DroidVM 官方 APK 是闭源软件（包名 com.zzvm），本仓库不打包、�
 
 > 4 GB VM 起不来时，先用 3 GB 把系统装好，再尝试加大；不要同时开一堆后台应用。
 
-## 4. 端口转发
+## 5. 端口转发
 
 在 DroidVM 的 NIC 设置里添加：
 
@@ -64,7 +93,7 @@ tcp 6081:6081
 - 3000/3001：OneBot HTTP/WS（bridge 在 VM 内访问 127.0.0.1:3001，通常不需要从手机外访问）；
 - 6081：noVNC，用来看 QQ 登录/扫码画面。
 
-## 5. 共享目录（可选）
+## 6. 共享目录（可选）
 
 如果 DroidVM 支持 virtiofs/9p，可以把手机目录挂到 VM：
 
@@ -77,7 +106,7 @@ sudo mount -t 9p -o trans=virtio shared /mnt/phone
 
 然后可以把本包/截图/安装包从手机传到 VM。共享目录失败也不会影响运行，可以改用 scp。
 
-## 6. 手机端操作方式
+## 7. 手机端操作方式
 
 没有电脑也可以：
 
@@ -85,7 +114,7 @@ sudo mount -t 9p -o trans=virtio shared /mnt/phone
 - 或在手机装一个 SSH 客户端，连 127.0.0.1:2222；
 - 所有命令都在 VM 内执行，不需要 adb/PC。
 
-## 7. 风险提示
+## 8. 风险提示
 
 - 不要用 QQ 主号；
 - 新设备/新 IP 首次登录容易触发验证码；
