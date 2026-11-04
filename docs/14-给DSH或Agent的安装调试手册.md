@@ -169,6 +169,8 @@ Agent 不应替主人跑公开镜像下载。让主人按 [11-SnowLuma镜像获�
 4. 下载 Artifact；
 5. 传到 VM 的 /tmp。
 
+> 这里的 Docker 只出现在 GitHub Actions 的镜像构建流程里；VM 运行时不依赖 Docker Engine，SnowLuma 最终用 chroot 运行。
+
 Agent 只做校验：
 
 ~~~bash

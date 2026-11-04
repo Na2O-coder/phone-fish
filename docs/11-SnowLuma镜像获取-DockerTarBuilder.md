@@ -3,6 +3,8 @@
 > 目标：没有电脑、没有本地 Docker，也能拿到 SnowLuma 的 arm64 Docker 镜像压缩包。
 >
 > 重要：这只是让你自己的 GitHub Actions 去官方镜像仓拉取并打包，不是把 SnowLuma 再分发给别人。SnowLuma 的 EULA 仍然约束你对镜像/rootfs 的使用；不要把生成的 tar 上传到公开 Release、网盘或群里。
+>
+> 运行时不依赖 Docker：这里的 Docker 只用于 GitHub Actions 里拉取/导出官方镜像；VM 内实际是解包 rootfs 后用 chroot 运行 SnowLuma。
 
 ## 0. 原理
 
