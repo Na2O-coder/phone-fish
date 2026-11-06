@@ -223,8 +223,11 @@ class RelationshipStore:
                         (self_qq, _text(user_id), fam, tru, ten, "", "", now))
             finally:
                 conn.close()
-        except Exception:
-            pass
+        except Exception as error:
+            try:
+                self.service.note_storage_error(error, "relationships.db")
+            except Exception:
+                pass
 
     def prompt_for(self, scene, chat_key, user_id):
         self_qq = self._self_qq()

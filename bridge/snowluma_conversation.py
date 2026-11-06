@@ -138,7 +138,11 @@ class ConversationStore:
                      json.dumps([_text(item) for item in (image_paths or []) if _text(item)][:8], ensure_ascii=False),
                      turn_id))
             return True
-        except Exception:
+        except Exception as error:
+            try:
+                self.service.note_storage_error(error, "conversation.db")
+            except Exception:
+                pass
             return False
         finally:
             conn.close()

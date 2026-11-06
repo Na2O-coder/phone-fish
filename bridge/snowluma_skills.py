@@ -52,6 +52,7 @@ HELP_TEXT = (
     "/mem clear 清空本会话长期记忆\n"
     "/effort low|high|max|auto 调整思考等级（auto=自适应）\n"
     "/主动 on|off|status|now 开启/关闭本会话主动找话题（now=立刻试一条）\n"
+    "/早安 on|off|status 按群开启/关闭每天早上的主动消息（仅主人）\n"
     "/放宽 on|off|status 群聊是否放宽为“所有消息都看/只被叫才回”（按群）\n"
     "/插话 0-100 按概率决定没被@的群消息要不要接（按群）\n"
     "/合并 毫秒 群聊多消息合并等待窗口（默认1200；/合并 reset 恢复）\n"
@@ -657,7 +658,7 @@ def _capabilities_text(config, scene):
         "- 对 QQ 表情/贴纸（sub_type 1/7）：不要描述或解释图里画了什么、是谁、什么手势/角色；只抓情绪和梗，用短句自然接。普通图片可以正常看图和描述。",
         "- 只根据当前这条消息实际附带的图片/视频说话；当前没有图片/视频、或画面里看不清时，绝对不要描述“这个表情/手势/大拇指/角色”。不要把历史图片、你自己发过的表情包、群友头像当成本条内容。",
         "- 群聊接梗不要解释词义/来源/用法，不要分析“这个词还能量化吗”这种；不要说我搜了一圈/查了一下。顺着吐槽、复读、短句接住就行；只有对方明确问“什么意思”才解释。",
-        "- 复读过的词不等于你的名字；不要因为刚接龙过某个词，就以为别人在叫你。只有 @你、你的QQ、昵称、小鲸鱼、鲸鱼才算叫你；出现 [称呼对应] 时按里面的归属判断。",
+        "- 复读过的词不等于你的名字；不要因为刚接龙过某个词，就以为别人在叫你。只有 @你、你的QQ、昵称、大肥鱼、鱼老师才算叫你；出现 [称呼对应] 时按里面的归属判断。",
         "- 回复只写说出口的话，不要写思考过程、判断依据、自我纠正或内心独白；禁止“这是在问X，不是我/让我想想/哦不对/我看看”这类句子。不确定就 [[silent]]。",
         "- 不要说“我记下了/记住了/这我认/收到/明白/了解”这类客服确认句；要表示记住了就直接接话或自然吐槽，比如“行吧”“知道了知道了”“烦死了 记着呢”。",
         "- 别人说“看看照片/发张照片/看看你/自拍”通常是想让你发自己的样子，不是让你看他照片：不能发真实照片，但可以发一张自己的表情包或文字描述，不要反问“哪来的照片/你倒是发”。",
@@ -2408,6 +2409,43 @@ def handle_command(service, event, scene, target, chat_key, text, config, image_
                 proactive.get("quietStart"), proactive.get("quietEnd")))
         else:
             _reply(service, scene, target, "本会话主动找话题：未开启（发 /主动 on 开启）")
+        return True
+    if command in ("/早安",):
+        if scene != "group":
+            _reply(service, scene, target, "这个指令只能在群里用")
+            return True
+        group = re.sub(r"\D", "", _t(chat_key).split(":", 1)[-1] or _t(target))
+        if not group:
+            _reply(service, scene, target, "拿不到群号")
+            return True
+        action = rest.strip().lower()
+        morning = config.get("morningGreeting") if isinstance(config.get("morningGreeting"), dict) else {}
+        defaults = [_t(item) for item in (morning.get("groups") or [])]
+        store = _state(service)
+        with store.lock:
+            overrides = store.data.setdefault("morningGreetingGroups", {})
+            if action in ("on", "开", "开启"):
+                overrides[group] = True
+                store.dirty = True
+                _reply(service, scene, target, "本群早安主动消息：已开启（每天 %s 左右；发 /早安 off 关闭）" % (
+                    _t(morning.get("time")) or "07:30"))
+                return True
+            if action in ("off", "关", "关闭"):
+                overrides[group] = False
+                store.dirty = True
+                _reply(service, scene, target, "本群早安主动消息：已关闭")
+                return True
+            if action and action not in ("status", "状态"):
+                _reply(service, scene, target, "格式：/早安 on|off|status")
+                return True
+            raw = overrides.get(group)
+            enabled = bool(raw) if raw is not None else group in defaults
+        if morning.get("enabled", True) is False:
+            state_text = "全局早安开关已关闭"
+        else:
+            state_text = "已开启" if enabled else "已关闭"
+        _reply(service, scene, target, ("本群早安主动消息：%s" + chr(10) + "每天 %s 左右；发 /早安 on 或 /早安 off 切换") % (
+            state_text, _t(morning.get("time")) or "07:30"))
         return True
     if command in ("/印象", "/画像", "/profile"):
         action = rest.strip()

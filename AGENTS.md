@@ -7,6 +7,21 @@
 - docs/00-选择虚拟机运行路线.md
 - docs/02 ~ docs/09
 
+> **phone-fish 把 Agent 辅助部署/调试作为一等能力。** 主要面向手机上的 dshgo / DSH：用户不必先学会整套 Linux，Agent 负责只读预检、分阶段部署、验收和排错；用户负责必须由本人完成的授权、账号登录、人设和私密配置。Agent 仍然不是“代点所有按钮”的黑盒，不能跳过 SnowLuma EULA 和确认步骤。
+
+## Agent 辅助部署是核心路径
+
+推荐给用户的默认路径：
+
+1. 用户在手机上打开 dshgo / DSH，把本文件（AGENTS.md）和 docs/14 交给 Agent；
+2. Agent 先做只读环境预检，输出环境报告，不直接改系统；
+3. Agent 按阶段部署：虚拟化路线 → VM → SnowLuma → OneBot → bridge → 验收；
+4. 每一阶段给出通过标准、失败下一步和回滚方式；
+5. 部署完成后，Agent 把需要用户确认/填写的配置列成清单，不把密钥写进公开文件；
+6. 用户只用小号、自己完成 SnowLuma 授权和 QQ 登录，Agent 不代登录、不猜密码。
+
+Agent 的交付目标是：主人能在不完全理解 Linux 的情况下，知道“现在到哪一步、下一步填什么、怎么验证、怎么恢复”。
+
 ## 硬性规则
 
 1. 先只读预检，再改系统；任何 rm -rf、覆盖 /opt、格式化、systemctl 重启前先让主人确认。
@@ -141,6 +156,46 @@ SSH：
 → bridge bootstrap + systemd
 → /health + OneBot WS + 私聊测试
 → 备份/隐私检查
+~~~
+
+## 用户部署前要准备、部署后要交给 Agent 的信息
+
+Agent 应主动列清单，但不要要求用户把 secret 贴到群聊、公开 issue 或截图里。优先让用户在本机配置文件/私密输入中填写，Agent 只读取、脱敏日志、写盘后 chmod 600。
+
+| 信息 | 用途 | 建议交接方式 |
+|---|---|---|
+| SnowLuma 官方 rootfs / 镜像来源 | 运行 QQ | 用户自己取得并确认 EULA；Agent 只检查路径和完整性 |
+| QQ 小号、主人 QQ、群号 | 登录、权限、白名单 | 账号密码由用户自己登录；QQ 号/群号可私密给 Agent |
+| 人设提示词 | 决定说话风格、称呼、边界 | 用户提供人设文本或偏好；Agent 写入 prompts/persona.md 或 config，不提交 |
+| DeepSeek API key / baseUrl / model | LLM | 本机私密文件或一次性输入；不写 README/commit/日志 |
+| TTS / STT 配置 | 语音；可选 | Edge TTS 通常无需 key；阿里云 ASR 等 key 由用户私密提供；Agent 只做连通性测试 |
+| OneBot / bridge token | 鉴权 | 优先由 Agent 随机生成并写入 600 权限文件；用户在 SnowLuma UI 里填写，不贴群 |
+| 群行为偏好 | 回不回、@、插话、睡眠、早安、主动 | 用户用自然语言给 Agent；Agent 写成 config，不写死人格 |
+| 手机/VM 访问方式 | SSH、VM 控制、备份 | 用户已配置的本地凭据；Agent 不猜密码 |
+| 备份位置与频率 | 恢复 | Agent 给出方案，用户确认可写路径 |
+
+### 部署完成后必须让用户确认或填写的项
+
+1. 主人 QQ（permissions.ownerUsers）和机器人小号；
+2. 允许的群、群管理员、白名单/黑名单；
+3. DeepSeek key、baseUrl、model、思考模式和预算；
+4. 人设：名字、自称、对主人的称呼、语气、边界、禁用话题/行为；
+5. TTS/STT：是否启用、音色、阿里云 key/endpoint、测试语音；
+6. OneBot token、bridge token、控制面 token；
+7. 睡眠时段、是否早晨主动消息、哪些群用 /早安 on 开启；
+8. 是否启用主动找话题、日报、复盘、长期记忆、表情库；
+9. 备份路径、备份频率、恢复演练；
+10. 验收：/health、OneBot WS、私聊、群 @、语音、早晨开关、磁盘只读告警。
+
+### 给 dshgo / DSH 的启动提示词
+
+可以直接把下面这段交给 Agent：
+
+~~~text
+请以 dshgo / DSH 的身份，按 phone-fish 的 AGENTS.md 和 docs/14 帮我部署、调试。
+先只读预检并输出环境报告，不要直接改系统；每个阶段先说明目的、通过标准、失败下一步。
+不要下载、分发或上传 SnowLuma 本体；需要我本人登录/授权/输入密钥时停下来让我操作。
+部署完成后，请列出我需要确认或填写的配置清单，并说明哪些信息属于 secret、不能提交到 GitHub。
 ~~~
 
 ## 交付格式

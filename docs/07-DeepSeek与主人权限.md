@@ -14,7 +14,7 @@ bootstrap 会把 permissions.ownerUsers 和 skills.groupAdmin.adminUsers 设成�
 只有主人能使用敏感命令，例如：
 
 ~~~text
-/状态 /日志 /配置 /重启桥 /规则 /日报 /缓存 /权限 /主动 /睡眠
+/状态 /日志 /配置 /重启桥 /规则 /日报 /缓存 /权限 /主动 /早安 /睡眠
 ~~~
 
 管理只走 QQ，不提供网页后台改配置。
@@ -25,7 +25,8 @@ bootstrap 会把 permissions.ownerUsers 和 skills.groupAdmin.adminUsers 设成�
 
 - autoReply：总开关、冷却、群聊合并窗口、插话概率；
 - groupReply：botNames、是否引用、是否 @；
-- sleep：睡眠时段、唤醒阈值、早上补回；
+- morningGreeting：每天早上的主动消息，按群 /早安 on|off|status 开关；
+- sleep：睡眠时段、唤醒阈值；旧的“早晨补回”默认关闭；
 - memory/profiles/reflection：长期记忆、人物印象、反思；
 - behavior.context：持久上下文、压缩阈值；
 - deepseek.thinkingMode：auto 低强度任务不思考，高强度保留。

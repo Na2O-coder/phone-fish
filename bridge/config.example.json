@@ -158,6 +158,7 @@
       "/好感",
       "/effort",
       "/主动",
+      "/早安",
       "/放宽",
       "/img",
       "/kick",
@@ -213,7 +214,7 @@
     "start": "23:00",
     "end": "07:00",
     "wakeThreshold": 8,
-    "summaryEnabled": true,
+    "summaryEnabled": false,
     "maxBuffer": 40,
     "postWakeQuietMinutes": 30,
     "ownerPrivateExempt": true
@@ -285,5 +286,13 @@
     "duplicateBlockSeconds": 60,
     "messagesPerMinuteLimit": 20,
     "burstBlockSeconds": 300
+  },
+  "morningGreeting": {
+    "enabled": true,
+    "time": "07:30",
+    "windowMinutes": 180,
+    "groups": [],
+    "historySize": 8,
+    "maxAttempts": 3
   }
 }

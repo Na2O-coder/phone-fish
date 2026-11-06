@@ -131,7 +131,9 @@ Android 宿主机
 - **SnowLuma 接入路线**：使用 Linux QQ 客户端 + OneBot，而不是 NapCat 协议端；
 - **双虚拟机路线**：硬件虚拟化优先（Gunyah / GenieZone / KVM），软件模拟作为实验性备选；
 - **长期记忆/关系/表情/睡眠/权限**：bridge 侧的可配置行为；
-- **Agent 辅助部署**：AGENTS.md + docs/14，让 DSH 或其他 Agent 先检查环境、再分阶段执行；
+- **早晨主动消息**：每天固定时间可选主动冒泡；按群 /早安 on|off|status 开关，不引用昨晚消息；
+- **存储只读保护**：启动检查根分区，写盘失败给主人告警，EROFS 时停止重试并提示 fsck；
+- **Agent 辅助部署（dshgo / DSH）**：AGENTS.md + docs/14 把只读预检、分阶段部署、验收和排错交给 Agent；用户只需按清单提供账号、人设、密钥等私密配置；
 - **隐私优先**：仓库不包含密钥、QQ 数据、聊天记录、rootfs 或 APK。
 
 ## 先读这些

@@ -28,6 +28,7 @@ ThreadingHTTPServer 控制面、状态机与重连）+ PLAN.md 的 JS↔Python �
 
 import argparse
 import base64
+import errno
 import copy
 import hashlib
 import hmac
@@ -64,7 +65,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PRODUCT = "com.operit.qq_snowluma"
-VERSION = "0.1.0"
+VERSION = "0.1.4"
 DEFAULT_CONTROL_PORT = 32146
 SECRET_MASK = "********"
 MASK_MIN_LENGTH = 4
@@ -155,7 +156,7 @@ DEFAULT_CONFIG = {
     },
     "permissions": {
         "ownerUsers": [],
-        "sensitiveCommands": ["/好感", "/effort", "/主动", "/放宽", "/插话", "/合并", "/配置", "/状态", "/日志", "/重启桥", "/代发", "/代发群", "/整理记忆", "/img", "/心情",
+        "sensitiveCommands": ["/好感", "/effort", "/主动", "/早安", "/放宽", "/插话", "/合并", "/配置", "/状态", "/日志", "/重启桥", "/代发", "/代发群", "/整理记忆", "/img", "/心情",
                               "/kick", "/mute", "/unmute", "/card", "/name", "/权限", "/印象"],
         "highRelationshipThreshold": 90,
         "highRelationshipCommands": ["/印象"],
@@ -181,10 +182,11 @@ DEFAULT_CONFIG = {
         "start": "23:00",
         "end": "07:00",
         "wakeThreshold": 8,
-        "summaryEnabled": True,
+        "summaryEnabled": False,
         "postWakeQuietMinutes": 30,
         "flushMaxAttempts": 3,
         "ownerPrivateExempt": True,
+        "exemptGroups": [],
         "maxBuffer": 40,
     },
     "pricing": {
@@ -208,6 +210,14 @@ DEFAULT_CONFIG = {
         "minIntervalMinutes": 180,
         "quietStart": 23,
         "quietEnd": 7,
+    },
+    "morningGreeting": {
+        "enabled": True,
+        "time": "07:30",
+        "windowMinutes": 180,
+        "groups": [],
+        "historySize": 8,
+        "maxAttempts": 3,
     },
     "skills": {
         "multiMessage": {"enabled": True, "maxMessages": 4},
@@ -410,6 +420,22 @@ def chmod_quiet(path, mode):
         os.chmod(path, mode)
     except OSError:
         pass
+
+def is_readonly_filesystem(path):
+    """Return True when path is on a read-only mount (e.g. ext4 remounted ro)."""
+    try:
+        flags = os.statvfs(path).f_flag
+        return bool(flags & getattr(os, "ST_RDONLY", 1))
+    except OSError:
+        return False
+
+
+def is_erofs_error(error):
+    """Detect EROFS / read-only filesystem write failures."""
+    if getattr(error, "errno", None) == errno.EROFS:
+        return True
+    text = as_text(error).lower()
+    return "read-only file system" in text or "readonly file system" in text or "erofs" in text
 
 
 def atomic_write_json(path, data, mode=0o600):
@@ -700,6 +726,16 @@ def normalize_config(raw):
     proactive["quietEnd"] = clamp_int(proactive.get("quietEnd"), 0, 23, 8)
     cfg["proactive"] = proactive
 
+    source_morning = cfg.get("morningGreeting") if is_object(cfg.get("morningGreeting")) else {}
+    morning = deep_merge(defaults["morningGreeting"], source_morning)
+    morning["enabled"] = to_bool(morning.get("enabled"), True)
+    morning["time"] = first_non_blank(morning.get("time"), "07:30")
+    morning["windowMinutes"] = clamp_int(morning.get("windowMinutes"), 0, 720, 180)
+    morning["groups"] = unique_text_list(morning.get("groups"))
+    morning["historySize"] = clamp_int(morning.get("historySize"), 3, 30, 8)
+    morning["maxAttempts"] = clamp_int(morning.get("maxAttempts"), 1, 10, 3)
+    cfg["morningGreeting"] = morning
+
     source_profiles = cfg.get("profiles") if is_object(cfg.get("profiles")) else {}
     profiles = deep_merge(defaults["profiles"], source_profiles)
     profiles["enabled"] = to_bool(profiles.get("enabled"), True)
@@ -747,6 +783,7 @@ def normalize_config(raw):
     sleep["postWakeQuietMinutes"] = clamp_int(sleep.get("postWakeQuietMinutes"), 0, 1440, 30)
     sleep["flushMaxAttempts"] = clamp_int(sleep.get("flushMaxAttempts"), 1, 10, 3)
     sleep["ownerPrivateExempt"] = to_bool(sleep.get("ownerPrivateExempt"), True)
+    sleep["exemptGroups"] = unique_text_list(sleep.get("exemptGroups"))
     sleep["maxBuffer"] = clamp_int(sleep.get("maxBuffer"), 10, 200, 40)
     cfg["sleep"] = sleep
 
@@ -982,6 +1019,10 @@ def default_state():
         "groupParticipants": {},
         "mood": {},
         "voiceCounters": {},
+        "morningGreetingDates": {},
+        "morningGreetingHistory": {},
+        "morningGreetingAttempts": {},
+        "morningGreetingGroups": {},
     }
 
 
@@ -993,6 +1034,9 @@ class StateStore:
         self.logger = logger
         self.lock = threading.RLock()
         self.dirty = False
+        self.readonly = False
+        self.last_error = ""
+        self.on_write_error = None
         self.data = default_state()
         loaded = read_json_file(path)
         if is_object(loaded):
@@ -1026,6 +1070,8 @@ class StateStore:
             return counters[name]
 
     def save_if_dirty(self, force=False):
+        if self.readonly:
+            return False
         with self.lock:
             if not self.dirty and not force:
                 return False
@@ -1033,11 +1079,24 @@ class StateStore:
             self.dirty = False
         try:
             atomic_write_json(self.path, payload, 0o600)
+            self.last_error = ""
             return True
         except OSError as error:
-            self.logger.log("write state failed: %s: %s" % (error.__class__.__name__, error))
+            self.last_error = "%s: %s" % (error.__class__.__name__, error)
+            readonly = is_erofs_error(error) or is_readonly_filesystem(os.path.dirname(self.path) or ".")
+            if readonly:
+                self.readonly = True
             with self.lock:
-                self.dirty = True
+                self.dirty = not readonly
+            self.logger.log("write state failed: %s%s" % (
+                self.last_error,
+                "（VM 根分区只读，需要 fsck）" if readonly else ""))
+            callback = self.on_write_error
+            if callback is not None:
+                try:
+                    callback(error, "state.json")
+                except Exception:
+                    pass
             return False
 
 
@@ -1076,7 +1135,7 @@ def normalize_state(state):
     if not isinstance(seen_ids, list):
         seen_ids = []
     result["seenMessageIds"] = [as_text(item) for item in seen_ids if as_text(item)][-MAX_SEEN_MESSAGE_IDS:]
-    for extra_key in ("lastBotMessageIds", "memory", "effortOverrides", "proactiveChats", "proactive", "groupReplyModes", "groupInterjectChance", "groupContext", "memeLibrary", "sleepBuffers", "pokeReplies", "memeLookupState", "lastStickerSent", "pendingImage", "sleepCooldownUntil", "userProfiles", "groupParticipants", "mood", "voiceCounters"):
+    for extra_key in ("lastBotMessageIds", "memory", "effortOverrides", "proactiveChats", "proactive", "groupReplyModes", "groupInterjectChance", "groupContext", "memeLibrary", "sleepBuffers", "pokeReplies", "memeLookupState", "lastStickerSent", "pendingImage", "sleepCooldownUntil", "userProfiles", "groupParticipants", "mood", "voiceCounters", "morningGreetingDates", "morningGreetingHistory", "morningGreetingAttempts", "morningGreetingGroups"):
         if not is_object(result.get(extra_key)):
             result[extra_key] = deep_copy(defaults[extra_key])
     return result
@@ -2387,6 +2446,7 @@ class AutoReplyEngine:
             return turn_id
         except Exception as error:
             try:
+                self.service.note_storage_error(error, "conversation.db")
                 self.service.log("记录日级对话失败: %s" % error)
             except Exception:
                 pass
@@ -2400,6 +2460,7 @@ class AutoReplyEngine:
             return conversation.record_assistant(chat_key, now_ms(), text, source=source)
         except Exception as error:
             try:
+                self.service.note_storage_error(error, "conversation.db")
                 self.service.log("记录日级回复失败: %s" % error)
             except Exception:
                 pass
@@ -5106,6 +5167,16 @@ class SleepManager:
                     return "normal"
             except Exception:
                 pass
+        if scene == "group":
+            try:
+                exempt_groups = {as_text(item) for item in (cfg.get("exemptGroups") or []) if as_text(item)}
+                if as_text(target) in exempt_groups:
+                    with self.service.state_store.lock:
+                        (self.service.state_store.data.get("sleepBuffers") or {}).pop(chat_key, None)
+                        self.service.state_store.dirty = True
+                    return "normal"
+            except Exception:
+                pass
         now_dt = self._now()
         inside, start, end, current = self._sleep_window(now_dt)
         if not inside:
@@ -5494,6 +5565,7 @@ class MemoryManager:
                              (as_text(pending.get("sha256")), as_text(pending.get("dhash")), body[:200],
                               as_text(source_qq), as_text(chat_key), self._now(), self._now()))
         except Exception as error:
+            self.service.note_storage_error(error, "memory.db")
             self.service.log("图片梗记录失败: %s" % error)
             return ""
         finally:
@@ -5579,6 +5651,7 @@ class MemoryManager:
                                    (scope, scope_id, subject_qq, digest)).fetchone()
             return row["id"] if row else None
         except Exception as error:
+            self.service.note_storage_error(error, "memory.db")
             self.service.log("写入记忆失败: %s" % error)
             return None
         finally:
@@ -6367,6 +6440,217 @@ class DailyDigestManager:
             time.sleep(30)
 
 
+class MorningGreetingManager:
+    """每天早上的主动冒泡；不引用昨晚消息，不固定早安模板。"""
+
+    def __init__(self, service):
+        self.service = service
+        self.stop_event = threading.Event()
+        self.thread = None
+        self.lock = threading.RLock()
+
+    def _cfg(self):
+        config = self.service.config_store.get()
+        behavior = config.get("behavior") if isinstance(config.get("behavior"), dict) else {}
+        block = behavior.get("morningGreeting") if isinstance(behavior.get("morningGreeting"), dict) else None
+        if block is None and isinstance(config.get("morningGreeting"), dict):
+            block = config.get("morningGreeting")
+        return block if isinstance(block, dict) else {}
+
+    def _now(self):
+        try:
+            from zoneinfo import ZoneInfo
+            return datetime.now(ZoneInfo(first_non_blank(self.service.config_store.get().get("timeZone"), "Asia/Shanghai")))
+        except Exception:
+            return datetime.now()
+
+    def _minutes(self, value, default):
+        try:
+            hour, minute = first_non_blank(value, default).split(":")[:2]
+            return max(0, min(1439, int(hour) * 60 + int(minute)))
+        except Exception:
+            return default
+
+    def start(self):
+        if self.thread is not None and self.thread.is_alive():
+            return
+        self.stop_event.clear()
+        self.thread = threading.Thread(target=self._loop, name="snowluma-morning-greeting", daemon=True)
+        self.thread.start()
+
+    def stop(self, timeout=2.0):
+        self.stop_event.set()
+        thread = self.thread
+        if thread is not None and thread.is_alive():
+            thread.join(max(0.1, timeout))
+        self.thread = None
+
+    def _mark_done(self, group, date_key):
+        with self.service.state_store.lock:
+            data = self.service.state_store.data
+            data.setdefault("morningGreetingDates", {})[group] = date_key
+            attempts = data.get("morningGreetingAttempts")
+            if isinstance(attempts, dict):
+                attempts.pop(group, None)
+            self.service.state_store.dirty = True
+
+    def _history(self, group):
+        with self.service.state_store.lock:
+            data = self.service.state_store.data.get("morningGreetingHistory") or {}
+            rows = data.get(group) if isinstance(data.get(group), list) else []
+            return [as_text(item) for item in rows if as_text(item)]
+
+    def _remember(self, group, text):
+        cfg = self._cfg()
+        limit = clamp_int(cfg.get("historySize"), 3, 30, 8)
+        with self.service.state_store.lock:
+            history = self.service.state_store.data.setdefault("morningGreetingHistory", {})
+            rows = history.get(group) if isinstance(history.get(group), list) else []
+            rows = [as_text(item) for item in rows if as_text(item)]
+            rows.append(as_text(text)[:300])
+            history[group] = rows[-limit:]
+            self.service.state_store.dirty = True
+
+    def _send_group(self, group, config, date_key):
+        chat_key = "group:" + group
+        system_prompt = skills_ext.build_system_prompt(self.service, config, chat_key, "group", user_id="")
+        history = self._history(group)
+        history_text = chr(10).join("- " + item for item in history[-8:]) if history else "（暂无）"
+        prompt = chr(10).join([
+            "",
+            "【早晨主动冒泡】",
+            "现在是新的一天早上。你要在群里主动冒一句，像刚醒来的群友，不是定时问候机器人。",
+            "这是你主动发起的冒泡，不是回复某条消息；本次允许主动说话，不受“没人叫你就潜水”的限制。",
+            "要求：",
+            "- 只发一到两句很短的话；",
+            "- 不要固定说“早安”，不要用“大早上”这类固定时间词；",
+            "- 不要每天同一句，不要复述昨晚聊天，不要假装刚看到夜间消息；",
+            "- 不要总结、不要说教、不要问所有人；",
+            "- 可以吐槽没睡够/要上班/早饭/今天不想动，或随口接一个最近群里的梗；",
+            "- 如果今天没有想说的，只输出 [[silent]]。",
+            "最近几天早上说过的话（不要重复）：",
+            history_text,
+        ])
+        messages = [
+            {"role": "system", "content": system_prompt + prompt},
+            {"role": "user", "content": "发今天的早上消息。"},
+        ]
+        try:
+            result = call_deepseek(config, messages, effort_override="low")
+        except Exception as error:
+            self.service.log("早晨主动消息请求失败: %s: %s" % (error.__class__.__name__, error))
+            return False
+        if not result.get("ok"):
+            self.service.log("早晨主动消息模型失败: %s" % result.get("error"))
+            return False
+        reply = as_text(result.get("reply")).strip()
+        if not reply:
+            return False
+        if any(line.replace(" ", "").lower() == "[[silent]]" for line in reply.splitlines()):
+            self._mark_done(group, date_key)
+            self.service.log("早晨主动消息选择沉默: group=%s" % group)
+            return True
+        try:
+            outcome = skills_ext.deliver_reply(
+                self.service,
+                {"user_id": "", "message_id": ""},
+                "group",
+                group,
+                chat_key,
+                reply,
+                config,
+                allow_auto_at=False,
+            )
+        except Exception as error:
+            self.service.log("早晨主动消息发送异常: %s: %s" % (error.__class__.__name__, error))
+            return False
+        if outcome.get("ok") and not outcome.get("silent"):
+            self._remember(group, reply)
+            self._mark_done(group, date_key)
+            self.service.log("早晨主动消息已发送: group=%s 长度=%d" % (group, len(reply)))
+            return True
+        if outcome.get("ok") and outcome.get("silent"):
+            self._mark_done(group, date_key)
+            self.service.log("早晨主动消息被静默: group=%s" % group)
+            return True
+        self.service.log("早晨主动消息发送失败: group=%s error=%s" % (group, outcome.get("error")))
+        return False
+
+    def _enabled_groups(self, cfg):
+        default_groups = []
+        for item in (cfg.get("groups") or []):
+            group = re.sub(r"\D", "", as_text(item))
+            if group and group not in default_groups:
+                default_groups.append(group)
+        with self.service.state_store.lock:
+            raw_overrides = self.service.state_store.data.get("morningGreetingGroups") or {}
+            overrides = dict(raw_overrides) if isinstance(raw_overrides, dict) else {}
+        groups = []
+        for group in default_groups:
+            if group in overrides:
+                if not to_bool(overrides.get(group), True):
+                    continue
+            groups.append(group)
+        for group, enabled in overrides.items():
+            group = re.sub(r"\D", "", as_text(group))
+            if group and to_bool(enabled, False) and group not in groups:
+                groups.append(group)
+        return groups
+
+    def flush(self):
+        cfg = self._cfg()
+        if not cfg.get("enabled", True):
+            return
+        groups = self._enabled_groups(cfg)
+        if not groups:
+            return
+        now = self._now()
+        target = self._minutes(cfg.get("time"), 7 * 60 + 30)
+        current = now.hour * 60 + now.minute
+        if current < target:
+            return
+        window = clamp_int(cfg.get("windowMinutes"), 0, 720, 180)
+        date_key = now.strftime("%Y-%m-%d")
+        max_attempts = clamp_int(cfg.get("maxAttempts"), 1, 10, 3)
+        for group in groups:
+            with self.service.state_store.lock:
+                dates = self.service.state_store.data.get("morningGreetingDates") or {}
+                if as_text(dates.get(group)) == date_key:
+                    continue
+                attempts = self.service.state_store.data.get("morningGreetingAttempts") or {}
+                attempt = attempts.get(group) if isinstance(attempts.get(group), dict) else {}
+                if as_text(attempt.get("date")) != date_key:
+                    attempt = {"date": date_key, "count": 0}
+            if window and current > target + window:
+                self._mark_done(group, date_key)
+                self.service.log("早晨主动消息已过时间窗，跳过: group=%s" % group)
+                continue
+            if safe_int(attempt.get("count"), 0) >= max_attempts:
+                self._mark_done(group, date_key)
+                self.service.log("早晨主动消息达到重试上限，跳过: group=%s" % group)
+                continue
+            if not self._send_group(group, self.service.config_store.get(), date_key):
+                with self.service.state_store.lock:
+                    attempts = self.service.state_store.data.setdefault("morningGreetingAttempts", {})
+                    current_attempt = attempts.get(group) if isinstance(attempts.get(group), dict) else {}
+                    if as_text(current_attempt.get("date")) != date_key:
+                        current_attempt = {"date": date_key, "count": 0}
+                    current_attempt["count"] = safe_int(current_attempt.get("count"), 0) + 1
+                    attempts[group] = current_attempt
+                    self.service.state_store.dirty = True
+
+    def _loop(self):
+        while not self.stop_event.is_set():
+            time.sleep(20)
+            try:
+                self.flush()
+            except Exception as error:
+                try:
+                    self.service.log("早晨主动消息处理失败: %s" % error)
+                except Exception:
+                    pass
+
+
 class SelfReviewManager:
     """One low-cost owner-only self-review per day."""
 
@@ -6501,20 +6785,8 @@ class SelfReviewManager:
             if not material.strip():
                 self.service.log("每日复盘跳过：没有材料")
                 return
-            try:
-                qq_state = self.service.state_store.snapshot().get("qq") or {}
-            except Exception:
-                qq_state = {}
-            bot_qq = as_text(config.get("botQQ")) or as_text(qq_state.get("selfId")) or "机器人"
-            bot_names = []
-            try:
-                group_reply = ((config.get("skills") or {}).get("groupReply") or {})
-                bot_names = [as_text(item) for item in (group_reply.get("botNames") or []) if as_text(item)]
-            except Exception:
-                bot_names = []
-            bot_label = "、".join(bot_names[:6]) or "小鲸鱼"
             system = (
-                "你是小鲸鱼的每日自我复盘器。你是小鲸鱼（QQ %s；群昵称/别名：%s），对话里的 [你] 指你自己，不是主人或群友。" % (bot_qq, bot_label) +
+                "你是小鲸鱼的每日自我复盘器。你是小鲸鱼（QQ 你的小号，群里显示你的群昵称），对话里的 [你] 指你自己，不是主人或群友。"
                 "只输出 JSON，不要解释。"
                 "看今天的记忆/关系摘要和最近对话，找出反复出现、值得长期改进的社交或表达问题。"
                 "不要凭一句话过度总结，不要评价用户隐私。输出："
@@ -6619,6 +6891,12 @@ class SnowLumaService:
         self._shutdown_done = False
         self.config_store = ConfigStore(self.config_file, self.logger)
         self.state_store = StateStore(self.state_file, self.logger)
+        self.storage_readonly = False
+        self.storage_last_error = ""
+        self._storage_alert_lock = threading.Lock()
+        self._storage_alert_sent = False
+        self._storage_last_alert_at = 0
+        self.state_store.on_write_error = self.note_storage_error
         config = self.config_store.get()
         launch_token = first_non_blank(getattr(args, "token", ""))
         self.control_token = first_non_blank(launch_token, config.get("bridgeToken"))
@@ -6645,6 +6923,7 @@ class SnowLumaService:
         self.monitor = AnomalyMonitor(self)
         self.self_review = SelfReviewManager(self)
         self.daily_digest = DailyDigestManager(self)
+        self.morning_greeting = MorningGreetingManager(self)
         self.current_video = None
         self.control_server = None
         self._control_thread = None
@@ -6660,6 +6939,71 @@ class SnowLumaService:
 
     def log(self, message):
         self.logger.log(message)
+
+    def _storage_status(self):
+        return {
+            "readOnly": bool(self.storage_readonly),
+            "rootReadOnly": is_readonly_filesystem("/"),
+            "stateDirReadOnly": is_readonly_filesystem(self.state_dir),
+            "lastError": as_text(self.storage_last_error),
+        }
+
+    def _storage_preflight(self):
+        """Detect a read-only VM root before starting writers."""
+        root_ro = is_readonly_filesystem("/")
+        state_ro = is_readonly_filesystem(self.state_dir)
+        if not root_ro and not state_ro:
+            return False
+        self.storage_readonly = True
+        self.state_store.readonly = True
+        self.storage_last_error = "VM 根分区只读，需要 fsck"
+        self.log("启动检查失败: %s（root=%s, state_dir=%s）" % (
+            self.storage_last_error, root_ro, state_ro))
+        self.log("进入只读保护模式：不启动 OneBot/自动回复/日报；修复文件系统后重启服务。")
+        return True
+
+    def note_storage_error(self, error, where="storage"):
+        """Log, rate-limit, and alert the owner about state/DB write failures."""
+        detail = "%s: %s" % (error.__class__.__name__, as_text(error))
+        readonly = is_erofs_error(error) or is_readonly_filesystem("/") or is_readonly_filesystem(self.state_dir)
+        if readonly:
+            self.storage_readonly = True
+            self.state_store.readonly = True
+        self.storage_last_error = detail + ("（VM 根分区只读，需要 fsck）" if readonly else "")
+        now = now_ms()
+        should_alert = False
+        with self._storage_alert_lock:
+            if not self._storage_alert_sent or now - self._storage_last_alert_at >= 10 * 60 * 1000:
+                should_alert = True
+                self._storage_alert_sent = True
+                self._storage_last_alert_at = now
+        suffix = "（VM 根分区只读，需要 fsck）" if readonly else ""
+        self.log("存储写入失败[%s]: %s%s" % (where, detail, suffix))
+        if should_alert:
+            threading.Thread(target=self._send_storage_alert, args=(where, detail, readonly), daemon=True).start()
+
+    def _send_storage_alert(self, where, detail, readonly):
+        try:
+            owners = [as_text(item) for item in (((self.config_store.get().get("permissions") or {}).get("ownerUsers") or []))]
+            if not owners:
+                self.log("存储告警未发送：未配置 ownerUsers")
+                return
+            if not getattr(self, "bridge", None):
+                return
+            lines = ["【phone-fish 存储告警】", "写入 %s 失败：%s" % (where, detail)]
+            if readonly:
+                lines.extend(["VM 根分区只读，需要 fsck。", "请先备份，再检查：mount | grep ' / '"])
+            lines.append("修复前不要反复重启；文件系统恢复正常后重启 bridge。")
+            result = self.send_message_now("private", owners[0], chr(10).join(lines)[:1800], skip_monitor=True)
+            if not result.get("ok"):
+                self.log("存储告警发送失败: %s" % result.get("error"))
+            else:
+                self.log("存储告警已发送给主人: where=%s readonly=%s" % (where, readonly))
+        except Exception as error:
+            try:
+                self.log("存储告警异常: %s: %s" % (error.__class__.__name__, error))
+            except Exception:
+                pass
 
     def _collect_secrets(self):
         secrets = []
@@ -6701,6 +7045,9 @@ class SnowLumaService:
     # ---- 生命周期 ----
 
     def start(self):
+        if self._storage_preflight():
+            self.start_control_server()
+            return
         self._write_pid_file()
         try:
             config_for_cleanup = self.config_store.get()
@@ -6734,19 +7081,26 @@ class SnowLumaService:
         try:
             self.relationships.ensure_schema()
         except Exception as rel_error:
+            self.note_storage_error(rel_error, "relationships.db")
             self.log("关系库初始化失败: %s" % rel_error)
         try:
             self.conversation.ensure_schema()
         except Exception as conv_error:
+            self.note_storage_error(conv_error, "conversation.db")
             self.log("日级对话库初始化失败: %s" % conv_error)
         self.bridge.start()
         self.daily_digest.start()
+        self.morning_greeting.start()
         self.self_review.start()
         self.auto_engine.start()
         self.proactive.start()
         self.profiles.start()
         self.sleep.start()
-        self.memories.start()
+        try:
+            self.memories.start()
+        except Exception as memory_error:
+            self.note_storage_error(memory_error, "memory.db")
+            self.log("记忆库初始化失败: %s" % memory_error)
         self.reflections.start()
         try:
             self.voice.cleanup()
@@ -6878,6 +7232,10 @@ class SnowLumaService:
         except Exception as error:
             self.log("停止自动回复引擎失败: %s" % error)
         try:
+            self.morning_greeting.stop(2.0)
+        except Exception as error:
+            self.log("停止早晨主动消息线程失败: %s" % error)
+        try:
             self.state_store.save_if_dirty(force=True)
         except Exception as error:
             self.log("保存 state 失败: %s" % error)
@@ -6949,13 +7307,17 @@ class SnowLumaService:
         }
 
     def build_health(self):
+        storage = self._storage_status()
+        ok = not storage["readOnly"]
         return {
-            "ok": True,
+            "ok": ok,
+            "error": storage["lastError"] if not ok else "",
             "version": VERSION,
             "product": PRODUCT,
             "pid": os.getpid(),
             "uptimeMs": self.uptime_ms(),
             "stateDir": self.state_dir,
+            "storage": storage,
         }
 
     def build_status(self, force=False):
@@ -6966,7 +7328,8 @@ class SnowLumaService:
         state = self.state_store.snapshot()
         counters = state.get("counters") if is_object(state.get("counters")) else {}
         return {
-            "ok": True,
+            "ok": not self.storage_readonly,
+            "error": self.storage_last_error if self.storage_readonly else "",
             "version": VERSION,
             "product": PRODUCT,
             "pid": os.getpid(),
@@ -7025,6 +7388,7 @@ class SnowLumaService:
                 "python": sys.version.split()[0],
                 "platform": sys.platform,
             },
+            "storage": self._storage_status(),
         }
 
     # ---- 控制面业务 ----

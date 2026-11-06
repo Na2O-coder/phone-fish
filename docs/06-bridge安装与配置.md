@@ -88,7 +88,8 @@ curl -H "X-Auth-Token: 你的BRIDGE_CONTROL_TOKEN" http://127.0.0.1:32146/health
 | onebotToken | 与 SnowLuma 一致 |
 | bridgeToken | 控制面 token；bootstrap 随机生成 |
 | autoReply.enabled | 配置完成后才开 |
-| sleep | 23:00–07:00 睡眠 |
+| sleep | 23:00–07:00 夜间静默；旧的“早晨补回”已默认关闭 |
+| morningGreeting | 每天早上的主动消息；按群 /早安 on|off|status 开关 |
 | behavior.context | 持久上下文/压缩阈值 |
 
 ## 7. 不要做

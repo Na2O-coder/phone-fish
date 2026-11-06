@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- 新增每天早上的主动消息（morningGreeting）：固定时间向配置群发一条短消息，不引用昨晚聊天；支持 /早安 on|off|status 按群开关。
+- 强化 Agent 辅助部署定位：AGENTS.md 增加 dshgo/DSH 启动提示词、部署后用户应交给人设/LLM/TTS/STT/账号/群配置清单和 secret 处理规则。
+- 关闭旧的睡眠“早晨补回”：夜间消息静默，不再在早上引用昨晚消息生成补回。
+- 新增存储只读保护：启动检查根目录，state/DB 写失败给主人告警，EROFS 时停止重试并提示 fsck；/health 暴露 storage 状态。
 - 补充硬件虚拟化平台说明：Qualcomm Gunyah（`/dev/gunyah`）、MediaTek GenieZone（`/dev/gzvm`）、Linux KVM（`/dev/kvm`）。
 - 明确 DroidVM 是 VM 管理器，不是 Hypervisor；KVM 是硬件虚拟化后端，不是独立 VM 软件。
 - README / AGENTS / docs/00 / 02 / 09 / 11 / 12 / 13 / 14 统一硬件虚拟化与软件模拟的术语和预检命令。
